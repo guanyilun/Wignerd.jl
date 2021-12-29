@@ -1,12 +1,7 @@
 module wignerd
 
-function dot(a, b)
-    s = 0
-    @inbounds @simd for i in eachindex(a)
-        s += a[i] * b[i]
-    end
-    s
-end
+using Tullio
+
 alpha(l, s1, s2) = (l ≤ abs(s1) || l ≤ abs(s2)) ? 0. : sqrt((l^2-s1^2)*(l^2-s2^2))/l
 
 function wigd_init!(s1, s2, cosθ, out)
@@ -45,7 +40,7 @@ function wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
     end
 end
 
-function wigd_cf_from_cl(s1, s2, lmax, cl, cosθ)
+function cf_from_cl(s1, s2, lmax, cl, cosθ)
     wigd_lo = zero(cosθ)
     wigd_hi = zero(cosθ)
     cf      = zero(cosθ)
@@ -60,7 +55,7 @@ function wigd_cf_from_cl(s1, s2, lmax, cl, cosθ)
     end
 end
 
-function wigd_cl_from_cf(s1, s2, lmax, cf, cosθ, weights)
+function cl_from_cf(s1, s2, lmax, cf, cosθ, weights)
     wigd_lo = zero(cosθ)
     wigd_hi = zero(cosθ)
     cl = zeros(Float64, lmax+1)
@@ -68,12 +63,12 @@ function wigd_cl_from_cf(s1, s2, lmax, cf, cosθ, weights)
     l = wigd_init!(s1, s2, cosθ, wigd_hi)
     wigd_hi .*=  weights
     
-    if l ≤ lmax; cl[l+1] = dot(cf, wigd_hi) end
+    if l ≤ lmax; cl[l+1] = (@tullio c=cf[i]*wigd_hi[i]) end
 
     while l < lmax
         wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
         l += 1
-        cl[l+1] = dot(cf, wigd_hi)
+        cl[l+1] = (@tullio c=cf[i]*wigd_hi[i])
     end
     cl
 end
