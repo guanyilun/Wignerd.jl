@@ -126,6 +126,7 @@ struct glquad{T<:AbstractFloat}
 end
 
 cf_from_cl(glq::glquad, s1, s2, lmax, cl) = cf_from_cl(s1, s2, lmax, cl, glq.x)
+cf_from_cl(glq::glquad, s1, s2, cl) = cf_from_cl(s1, s2, size(cl,1)-1, cl, glq.x)
 cl_from_cf(glq::glquad, s1, s2, lmax, cf) = cl_from_cf(s1, s2, lmax, cf, glq.x, glq.w)
 
 end # module
