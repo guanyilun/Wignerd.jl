@@ -1,6 +1,8 @@
 module wignerd
 
 using Tullio
+using FastGaussQuadrature
+
 
 alpha(l, s1, s2) = (l ≤ abs(s1) || l ≤ abs(s2)) ? 0. : sqrt((l^2-s1^2)*(l^2-s2^2))/l
 
@@ -115,5 +117,15 @@ function cl_from_cf(s1, s2, lmax, cf::AbstractArray{T,2}, cosθ, weights) where 
     end
     cl
 end
+
+# wrapper calls
+struct glquad{T<:AbstractFloat}
+    x::AbstractArray{T,1}
+    w::AbstractArray{T,1}
+    glquad(n) = ((x, w) = gausslegendre(n); new{Float64}(x, w))
+end
+
+cf_from_cl(glq::glquad, s1, s2, lmax, cl) = cf_from_cl(s1, s2, lmax, cl, glq.x)
+cl_from_cf(glq::glquad, s1, s2, lmax, cf) = cl_from_cf(s1, s2, lmax, cf, glq.x, glq.w)
 
 end # module
