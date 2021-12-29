@@ -40,7 +40,7 @@ function wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
     end
 end
 
-function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,1}, cosθ)
+function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,1}, cosθ) where T
     wigd_lo = zero(cosθ)
     wigd_hi = zero(cosθ)
     cf      = zero(cosθ)
@@ -57,9 +57,10 @@ function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,1}, cosθ)
 end
 
 # processing multiple ps at the same time, for nspec=2 it's faster by ~10%,
-# for nspec=5 it's faster by 50%
+# for nspec=5 it's faster by 50%. The improvement is marginal because of poor
+# memory access pattern when nspec is small.
 # input: cl has shape (nell, nspec)
-# ouput: cf has shape (ntheta, nspec)
+# output: cf has shape (ntheta, nspec)
 function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,2}, cosθ) where T
     wigd_lo = zero(cosθ)
     wigd_hi = zero(cosθ)
@@ -75,7 +76,7 @@ function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,2}, cosθ) where T
     cf
 end
 
-function cl_from_cf(s1, s2, lmax, cf, cosθ, weights)
+function cl_from_cf(s1, s2, lmax, cf::AbstractArray{T,1}, cosθ, weights) where T
     wigd_lo = zero(cosθ)
     wigd_hi = zero(cosθ)
     cl = zeros(Float64, lmax+1)
@@ -89,6 +90,28 @@ function cl_from_cf(s1, s2, lmax, cf, cosθ, weights)
         wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
         l += 1
         cl[l+1] = (@tullio c=cf[i]*wigd_hi[i])
+    end
+    cl
+end
+
+# processing multiple cf at the same time, for nspec=2 it's faster by 30%,
+# for nspec=5 it's ~ 3 times faster, compared to repeated calls.
+# input: cf has shape (ntheta, nspec)
+# output: cl has shape (nell, nspec)
+function cl_from_cf(s1, s2, lmax, cf::AbstractArray{T,2}, cosθ, weights) where T
+    wigd_lo = zero(cosθ)
+    wigd_hi = zero(cosθ)
+    cl = zeros(Float64, lmax+1, size(cf,2))
+
+    l = wigd_init!(s1, s2, cosθ, wigd_hi)
+    wigd_hi .*=  weights
+
+    if l ≤ lmax; (v = view(cl,l+1,:); @tullio v[j] = cf[i,j]*wigd_hi[i]) end
+
+    while l < lmax
+        wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
+        l += 1
+        v = view(cl,l+1,:); @tullio v[j] = cf[i,j]*wigd_hi[i]
     end
     cl
 end
