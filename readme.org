@@ -1,0 +1,6 @@
+* wignerd.jl
+Another julia learning project: re-implementation of [[https://github.com/dhanson/quicklens/blob/master/quicklens/math/wignerd.c][wignerd.c]] library in julia.
+
+As of now, cf_from_cl is around 2-3 times faster than the version in
+wignerd.c, and cl_from_cf is around 25% faster than the version in
+wignerd.c.
