@@ -12,18 +12,18 @@ function wigd_init!(s1, s2, cosθ, out)
         A *= s12sign
         s1, s2 = s2, s1
     end
-    
+
     if s2 < 0
         A *= s12sign
         s1, s2 = -s1, -s2
     end
-    
+
     abs_s1 = abs(s1);
-    
+
     for i = 1:s2-abs_s1
         A *= sqrt((s2+abs_s1+i)/i)
     end
- 
+
     @. out = A*((1+cosθ)/2)^((s2+s1)/2) * ((1-cosθ)/2)^((s2-s1)/2)
 
     s2
@@ -40,11 +40,11 @@ function wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
     end
 end
 
-function cf_from_cl(s1, s2, lmax, cl, cosθ)
+function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,1}, cosθ)
     wigd_lo = zero(cosθ)
     wigd_hi = zero(cosθ)
     cf      = zero(cosθ)
-    
+
     l = wigd_init!(s1, s2, cosθ, wigd_hi)
     if l ≤ lmax; cf .= cl[l+1] .* wigd_hi end
 
@@ -53,16 +53,36 @@ function cf_from_cl(s1, s2, lmax, cl, cosθ)
         l += 1
         cf .+= cl[l+1] .* wigd_hi
     end
+    cf
+end
+
+# processing multiple ps at the same time, for nspec=2 it's faster by ~10%,
+# for nspec=5 it's faster by 50%
+# input: cl has shape (nell, nspec)
+# ouput: cf has shape (ntheta, nspec)
+function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,2}, cosθ) where T
+    wigd_lo = zero(cosθ)
+    wigd_hi = zero(cosθ)
+    cf      = zeros(T, length(cosθ), size(cl,2))
+
+    l₀ = wigd_init!(s1, s2, cosθ, wigd_hi)
+    if l₀ ≤ lmax; (v=view(cl,l₀+1,:); @tullio cf[j,i] = v[i] * wigd_hi[j]) end
+
+    for l = l₀:lmax-1
+        wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
+        v=view(cl,l+2,:); @tullio cf[j,i] += v[i] * wigd_hi[j]
+    end
+    cf
 end
 
 function cl_from_cf(s1, s2, lmax, cf, cosθ, weights)
     wigd_lo = zero(cosθ)
     wigd_hi = zero(cosθ)
     cl = zeros(Float64, lmax+1)
-    
+
     l = wigd_init!(s1, s2, cosθ, wigd_hi)
     wigd_hi .*=  weights
-    
+
     if l ≤ lmax; cl[l+1] = (@tullio c=cf[i]*wigd_hi[i]) end
 
     while l < lmax
