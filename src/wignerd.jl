@@ -4,6 +4,10 @@ using Tullio
 using FastGaussQuadrature
 using LoopVectorization
 
+export cl_from_cf
+export cf_from_cl
+export glquad
+
 # 1/4pi, to save from repeated calculation of 1/4π <- division is slow
 const fourpi⁻¹ = 0.07957747154594767
 
@@ -142,8 +146,8 @@ struct glquad{T<:AbstractFloat}
     glquad(n) = ((x, w) = gausslegendre(n); new{Float64}(x, w))
 end
 
-cf_from_cl(glq::glquad, s1, s2, lmax, cl) = cf_from_cl(s1, s2, lmax, cl, glq.x)
-cf_from_cl(glq::glquad, s1, s2, cl) = cf_from_cl(s1, s2, size(cl,1)-1, cl, glq.x)
+cf_from_cl(glq::glquad, s1, s2, lmax, cl; prefactor=false) = cf_from_cl(s1, s2, lmax, cl, glq.x; prefactor=prefactor)
+cf_from_cl(glq::glquad, s1, s2, cl; prefactor=false) = cf_from_cl(s1, s2, size(cl,1)-1, cl, glq.x; prefactor=prefactor)
 cl_from_cf(glq::glquad, s1, s2, lmax, cf) = cl_from_cf(s1, s2, lmax, cf, glq.x, glq.w)
 
 end # module
