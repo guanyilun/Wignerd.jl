@@ -4,6 +4,8 @@ using Tullio
 using FastGaussQuadrature
 using LoopVectorization
 
+# 1/4pi, to save from repeated calculation of 1/4π <- division is slow
+const fourpi⁻¹ = 0.07957747154594767
 
 alpha(l, s1, s2) = (l ≤ abs(s1) || l ≤ abs(s2)) ? 0. : sqrt((l^2-s1^2)*(l^2-s2^2))/l
 
@@ -44,18 +46,26 @@ function wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
     end
 end
 
-function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,1}, cosθ) where T
+# Calculate ∑ₗ cl d_{s1,s2}^l
+# if prefactor is true, calculate \sum_l cl d_{s1,s2}^l
+function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,1}, cosθ; prefactor=false) where T
     wigd_lo = zero(cosθ)
     wigd_hi = zero(cosθ)
     cf      = zero(cosθ)
 
     l = wigd_init!(s1, s2, cosθ, wigd_hi)
-    if l ≤ lmax; cf .= cl[l+1] .* wigd_hi end
+    # l+1 because cl starts from l=0 while index starts from 0
+    if l ≤ lmax
+        # optionally include a factor of (2l+1)/4pi
+        fac = prefactor ? (2*l+1)*fourpi⁻¹ : 1
+        cf .= cl[l+1] .* wigd_hi .* fac
+    end
 
     while l < lmax
         wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
         l += 1
-        cf .+= cl[l+1] .* wigd_hi
+        fac = prefactor ? (2*l+1)*fourpi⁻¹ : 1
+        cf .+= cl[l+1] .* wigd_hi .* fac
     end
     cf
 end
@@ -65,21 +75,26 @@ end
 # memory access pattern when nspec is small.
 # input: cl has shape (nell, nspec)
 # output: cf has shape (ntheta, nspec)
-function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,2}, cosθ) where T
+function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,2}, cosθ; prefator=false) where T
     wigd_lo = zero(cosθ)
     wigd_hi = zero(cosθ)
     cf      = zeros(T, length(cosθ), size(cl,2))
 
     l₀ = wigd_init!(s1, s2, cosθ, wigd_hi)
-    if l₀ ≤ lmax; (v=view(cl,l₀+1,:); @tullio cf[j,i] = v[i] * wigd_hi[j]) end
+    if l₀ ≤ lmax
+        fac = prefactor ? (2*l₀+1)*fourpi⁻¹ : 1
+        (v=view(cl,l₀+1,:); @tullio cf[j,i] = v[i] * wigd_hi[j] * fac)
+    end
 
     for l = l₀:lmax-1
         wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
-        v=view(cl,l+2,:); @tullio cf[j,i] += v[i] * wigd_hi[j]
+        fac = prefactor ? (2*l+1)*fourpi⁻¹ : 1
+        v=view(cl,l+2,:); @tullio cf[j,i] += v[i] * wigd_hi[j] * fac
     end
     cf
 end
 
+# calculate ∫ dcosθ cf d_{s1,s2}^l(θ)
 function cl_from_cf(s1, s2, lmax, cf::AbstractArray{T,1}, cosθ, weights) where T
     wigd_lo = zero(cosθ)
     wigd_hi = zero(cosθ)
