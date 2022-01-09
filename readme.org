@@ -19,8 +19,8 @@ cl = @. l*(l+1)  # dummy
 glq = wignerd.glquad(npoints)
 
 # calculate cf = \sum_l d^l_{22}(\beta) cl(l)
-cf = wignerd.cf_from_cl(glq, 2, 2, cl)
+cf = cf_from_cl(glq, 2, 2, cl)
 
 # calculate cl = \int_{-1}^1 d\cos\beta cf(\beta) d_{13}^l(\beta)
-cl = wignerd.cl_from_cf(glq, 1, 3, lmax, cf)
+cl = cl_from_cf(glq, 1, 3, lmax, cf)
 #+END_SRC
