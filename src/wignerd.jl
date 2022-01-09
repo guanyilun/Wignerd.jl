@@ -11,7 +11,7 @@ export glquad
 # 1/4pi, to save from repeated calculation of 1/4π <- division is slow
 const fourpi⁻¹ = 0.07957747154594767
 
-alpha(l, s1, s2) = (l ≤ abs(s1) || l ≤ abs(s2)) ? 0. : sqrt((l^2-s1^2)*(l^2-s2^2))/l
+alpha(l::T, s1::N, s2::N) where {T,N} = (l ≤ abs(s1) || l ≤ abs(s2)) ? zero(T) : sqrt((l^2-s1^2)*(l^2-s2^2))/l
 
 function wigd_init!(s1, s2, cosθ, out)
     s12sign = (mod(s1+s2,2) == 1) ? -1 : 1
@@ -51,25 +51,28 @@ function wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
 end
 
 # Calculate ∑ₗ cl d_{s1,s2}^l
-# if prefactor is true, calculate \sum_l cl d_{s1,s2}^l
-function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,1}, cosθ; prefactor=false) where T
+# if prefactor is true, calculate \sum_l cl d_{s1,s2}^l (2l+1)/4π
+# if lmin is specified,
+function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,1}, cosθ; prefactor=false, lmin=0) where T
     wigd_lo = zero(cosθ)
     wigd_hi = zero(cosθ)
     cf      = zero(cosθ)
 
     l = wigd_init!(s1, s2, cosθ, wigd_hi)
     # l+1 because cl starts from l=0 while index starts from 0
-    if l ≤ lmax
+    if l ≥ lmin && l ≤ lmax
         # optionally include a factor of (2l+1)/4pi
         fac = prefactor ? (2*l+1)*fourpi⁻¹ : 1
-        cf .= cl[l+1] .* wigd_hi .* fac
+        @inbounds cf .= cl[l+1] .* wigd_hi .* fac
     end
 
     while l < lmax
         wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
         l += 1
-        fac = prefactor ? (2*l+1)*fourpi⁻¹ : 1
-        cf .+= cl[l+1] .* wigd_hi .* fac
+        if l ≥ lmin  # only add from lmin, if specified
+            fac = prefactor ? (2*l+1)*fourpi⁻¹ : 1
+            @inbounds cf .+= cl[l+1] .* wigd_hi .* fac
+        end
     end
     cf
 end
@@ -79,21 +82,25 @@ end
 # memory access pattern when nspec is small.
 # input: cl has shape (nell, nspec)
 # output: cf has shape (ntheta, nspec)
-function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,2}, cosθ; prefator=false) where T
+function cf_from_cl(s1, s2, lmax, cl::AbstractArray{T,2}, cosθ; prefator=false, lmin=0) where T
     wigd_lo = zero(cosθ)
     wigd_hi = zero(cosθ)
     cf      = zeros(T, length(cosθ), size(cl,2))
 
-    l₀ = wigd_init!(s1, s2, cosθ, wigd_hi)
-    if l₀ ≤ lmax
+    l = wigd_init!(s1, s2, cosθ, wigd_hi)
+    if l ≥ lmin && l ≤ lmax
+        # optionally include a factor of (2l+1)/4pi
         fac = prefactor ? (2*l₀+1)*fourpi⁻¹ : 1
         (v=view(cl,l₀+1,:); @tullio cf[j,i] = v[i] * wigd_hi[j] * fac)
     end
 
-    for l = l₀:lmax-1
+    while l < lmax
         wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
-        fac = prefactor ? (2*l+1)*fourpi⁻¹ : 1
-        v=view(cl,l+2,:); @tullio cf[j,i] += v[i] * wigd_hi[j] * fac
+        l += 1
+        if l ≥ lmin
+            fac = prefactor ? (2*l+1)*fourpi⁻¹ : 1
+            v=view(cl,l+1,:); @tullio cf[j,i] += v[i] * wigd_hi[j] * fac
+        end
     end
     cf
 end
@@ -146,8 +153,8 @@ struct glquad{T<:AbstractFloat}
     glquad(n) = ((x, w) = gausslegendre(n); new{Float64}(x, w))
 end
 
-cf_from_cl(glq::glquad, s1, s2, lmax, cl; prefactor=false) = cf_from_cl(s1, s2, lmax, cl, glq.x; prefactor=prefactor)
-cf_from_cl(glq::glquad, s1, s2, cl; prefactor=false) = cf_from_cl(s1, s2, size(cl,1)-1, cl, glq.x; prefactor=prefactor)
+cf_from_cl(glq::glquad, s1, s2, lmax, cl; prefactor=false, lmin=0) = cf_from_cl(s1, s2, lmax, cl, glq.x; prefactor=prefactor, lmin=lmin)
+cf_from_cl(glq::glquad, s1, s2, cl; prefactor=false, lmin=0) = cf_from_cl(s1, s2, size(cl,1)-1, cl, glq.x; prefactor=prefactor, lmin=lmin)
 cl_from_cf(glq::glquad, s1, s2, lmax, cf) = cl_from_cf(s1, s2, lmax, cf, glq.x, glq.w)
 
 end # module
