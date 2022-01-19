@@ -42,8 +42,8 @@ function wigd_rec!(l, s1, s2, cosθ, wigd_hi, wigd_lo)
     alpha_hi = alpha(l+1, s1, s2)
     alpha_lo = alpha(l, s1, s2)
     beta = (s1==0 || s2==0) ? 0. : (s1*s2/(l*(l+1)))
-    @fastmath @inbounds @simd for i in eachindex(cosθ)
-    # @turbo for i in eachindex(cosθ)
+    # @fastmath @inbounds @simd for i in eachindex(cosθ)
+    @turbo for i in eachindex(cosθ)
         x = (2*l+1)*(cosθ[i]-beta) * wigd_hi[i] - alpha_lo*wigd_lo[i]
         wigd_lo[i] = wigd_hi[i]
         wigd_hi[i] = x / alpha_hi
