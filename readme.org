@@ -8,7 +8,7 @@ wignerd.c.
 ** Example
 
 #+BEGIN_SRC julia
-using wignerd
+using Wignerd
 
 lmax = 3000
 npoints = 4501
@@ -16,7 +16,7 @@ npoints = 4501
 l = collect(0:lmax)
 cl = @. l*(l+1)  # dummy
 
-glq = wignerd.glquad(npoints)
+glq = Wignerd.glquad(npoints)
 
 # calculate cf = \sum_l d^l_{22}(\beta) cl(l)
 cf = cf_from_cl(glq, 2, 2, cl)
