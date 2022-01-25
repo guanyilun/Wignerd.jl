@@ -1,4 +1,4 @@
-module wignerd
+module Wignerd
 
 using Tullio
 using FastGaussQuadrature
