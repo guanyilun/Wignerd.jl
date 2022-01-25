@@ -1,8 +1,8 @@
 * Wignerd.jl
 [[https://guanyilun.github.io/Wignerd.jl/stable][https://img.shields.io/badge/docs-stable-blue.svg]]
 [[https://guanyilun.github.io/Wignerd.jl/dev][https://img.shields.io/badge/docs-dev-blue.svg]]
-[[https://github.com/guanyilun/Wignerd.jl/actions/workflows/CI.yml?query=branch%3Amain][https://github.com/guanyilun/Wignerd.jl/actions/workflows/CI.yml/badge.svg?branch=main]]
-[[https://codecov.io/gh/guanyilun/Wignerd.jl][https://codecov.io/gh/guanyilun/Wignerd.jl/branch/main/graph/badge.svg]]
+[[https://github.com/guanyilun/Wignerd.jl/actions/workflows/CI.yml?query=branch%3Amain][https://github.com/guanyilun/Wignerd.jl/actions/workflows/CI.yml/badge.svg?branch=master]]
+[[https://codecov.io/gh/guanyilun/Wignerd.jl][https://codecov.io/gh/guanyilun/Wignerd.jl/branch/master/graph/badge.svg]]
 
 Re-implementation of [[https://github.com/dhanson/quicklens/blob/master/quicklens/math/wignerd.c][wignerd.c]] library in julia.
 
