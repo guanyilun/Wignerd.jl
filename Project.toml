@@ -8,11 +8,12 @@ FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 
+[compat]
+Tullio = "0.3"
+julia = "1.7"
+
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[compat]
-julia = "1.7"
 
 [targets]
 test = ["Test"]
